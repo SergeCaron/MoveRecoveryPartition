@@ -44,20 +44,21 @@ You have the option to extend the existing / to specify the size of the new Reco
 You must run PowerShell as an administrator. Invoke the script (relative path not specified here).
 Script parameters are:
 
-MoveRecoveryPartition.ps1 -UseLetter R -ExtendedSize <size> -Log -Details -SourcesDir <Path>
+	MoveRecoveryPartition.ps1 -UseLetter R -ExtendedSize <size> -Log -Details -SourcesDir <Path>
 
 where:
--UseLetter      is the drive letter that will be assigned to the recovery partition.
+
+- UseLetter      is the drive letter that will be assigned to the recovery partition.
 				This letter is only used during excution of the script. There is no default value.
 
--ExtendedSize   is the size of the new recovery partition. If <size> is less than 1MB, <size>
+- ExtendedSize   is the size of the new recovery partition. If <size> is less than 1MB, <size>
 				is multiplied by 1MB, e.g. 600 implies 600MB.
 
--Log            Create a transcript log on the user's desktop.
+- Log            Create a transcript log on the user's desktop.
 
--Details        Display detailed information throughout execution of this script.
+- Details        Display detailed information throughout execution of this script.
 
--SourcesDir     is the directory of the Windows Installation Media containing Install.win.
+- SourcesDir     is the directory of the Windows Installation Media containing Install.win.
 				This is only used if this script finds no Recovery Environment on this system.
 
 The Recovery Environment can be brought up-to-date using Microsoft's KB5034957.
@@ -65,5 +66,5 @@ The Recovery Environment can be brought up-to-date using Microsoft's KB5034957.
 See https://en.wikibooks.org/wiki/Windows_10%2B_Recovery_Environment_(RE)_Notes
 for a general revision of the Recovery Environment since the release of Windows 10.
 
-In any case: USE AT YOUR OWN RISK!
+*In any case: USE AT YOUR OWN RISK!*
 
