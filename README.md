@@ -48,17 +48,17 @@ Script parameters are:
 
 where:
 
-- UseLetter      is the drive letter that will be assigned to the recovery partition.
+- -UseLetter:      is the drive letter that will be assigned to the recovery partition.
 				This letter is only used during excution of the script. There is no default value.
 
-- ExtendedSize   is the size of the new recovery partition. If <size> is less than 1MB, <size>
+- -ExtendedSize:   is the size of the new recovery partition. If <size> is less than 1MB, <size>
 				is multiplied by 1MB, e.g. 600 implies 600MB.
 
-- Log            Create a transcript log on the user's desktop.
+- -Log:            Create a transcript log on the user's desktop.
 
-- Details        Display detailed information throughout execution of this script.
+- -Details:        Display detailed information throughout execution of this script.
 
-- SourcesDir     is the directory of the Windows Installation Media containing Install.win.
+- -SourcesDir:     is the directory of the Windows Installation Media containing Install.win.
 				This is only used if this script finds no Recovery Environment on this system.
 
 The Recovery Environment can be brought up-to-date using Microsoft's KB5034957.
