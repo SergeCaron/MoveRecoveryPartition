@@ -66,5 +66,5 @@ The Recovery Environment can be brought up-to-date using Microsoft's KB5034957.
 See https://en.wikibooks.org/wiki/Windows_10%2B_Recovery_Environment_(RE)_Notes
 for a general revision of the Recovery Environment since the release of Windows 10.
 
-*In any case: USE AT YOUR OWN RISK!*
+**In any case: USE AT YOUR OWN RISK!**
 
