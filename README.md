@@ -82,7 +82,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
 Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
 
-PS C:\Users\AdministrateurSBS.PCEVOLUTION> .\Desktop\MoveRecoveryPartition.ps1 -UseLetter R -ExtendedSize 1024
+PS C:\Users\ThisUser> .\Desktop\MoveRecoveryPartition.ps1 -UseLetter R -ExtendedSize 1024
 
 WARNING: -> Drive letter R is used to manipulate the Recovery partition. This may conflict
 WARNING: -> with your current drive assignments.
@@ -164,7 +164,7 @@ The operation completed successfully.
 The operation completed successfully.
 The operation completed successfully.
 
-There is a backup of the Recovery partition in C:\Users\ADMINI~1.PCE\AppData\Local\Temp.
+There is a backup of the Recovery partition in C:\Users\ThisUser\AppData\Local\Temp.
 
 Deployment Image Servicing and Management tool
 Version: 10.0.22621.2792
@@ -177,7 +177,7 @@ REAGENTC.EXE: Operation Successful.
 
 Removing drive letter R...
 
-Enter 'Yes' to delete the backup of the recovery partition in C:\Users\ADMINI~1.PCE\AppData\Local\Temp , anything else to continue: yes
+Enter 'Yes' to delete the backup of the recovery partition in C:\Users\ThisUser\AppData\Local\Temp , anything else to continue: yes
 
 Computing new System partition size. Please be patient ...
 
