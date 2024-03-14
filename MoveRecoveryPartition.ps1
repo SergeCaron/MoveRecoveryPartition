@@ -1,5 +1,7 @@
 ##******************************************************************
 ##
+## Revision date: 2024.03.13
+##
 ## Copyright (c) 2023-2024 PC-Évolution enr.
 ## This code is licensed under the GNU General Public License (GPL).
 ##
@@ -43,7 +45,7 @@
 ##******************************************************************
 
 param (
-	[Parameter(mandatory=$true, HelpMessage='Set the drive letter to use for the Recovery partition')]
+	[Parameter(mandatory = $true, HelpMessage = 'Set the drive letter to use for the Recovery partition')]
 	[char]$UseLetter,
 	[parameter()]
 	[switch]$Log,
@@ -83,20 +85,20 @@ Function RestartVDS {
 	Try {
 		# Stop Microsoft Management Consoles that may use Disk Management Services
 		$Process = (Get-Process -ProcessName mmc -ErrorAction Stop) `
-					| Where-Object { $_.Modules.Description -match "Disk Management Snap-in" } `
-					| Select-Object -Property ID | Stop-Process
+		| Where-Object { $_.Modules.Description -match "Disk Management Snap-in" } `
+		| Select-Object -Property ID | Stop-Process
 		# ... and insist if the user did not cooperate.
 		$Process = (Get-Process -ProcessName mmc -ErrorAction Stop) `
-					| Where-Object { $_.Modules.Description -match "Disk Management Snap-in" } `
-					| Select-Object -Property ID | Stop-Process -Force
-	 }
+		| Where-Object { $_.Modules.Description -match "Disk Management Snap-in" } `
+		| Select-Object -Property ID | Stop-Process -Force
+	}
 	Catch {
 		# Do nothing!
-	 }
+	}
 	Finally {
 		## Restart the "Virtual Dik Service"
 		Restart-Service -Name VDS
-	 }
+	}
 }
 
 <#	ResizeSystemPartition
@@ -112,16 +114,17 @@ $ResizeSystemPartition = {
 
 	# Compute a Recovery partition size, if it is going to be contiguous to the system partition.
 	If ($FreeSizeRequired -gt 0) {
-		If ($ExtendedSize -lt 1MB) {$ExtendedSize = $ExtendedSize * 1MB }
+		If ($ExtendedSize -lt 1MB) { $ExtendedSize = $ExtendedSize * 1MB }
 		$NewRESize = [UInt64] [math]::Max( $ExtendedSize, $FreeSizeRequired )
 		
 		## For Windows 11, the recommended recovery partition size is 990MB
 		## See https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/hard-drives-and-partitions?view=windows-11
 		If ($NewRESize -lt 990MB) {
 			If ($(Read-Host "Enter 'Yes' to use the recommended minimum partition size of 990MB for Windows RE, anything else to continue").tolower().StartsWith('yes')) `
-			  {	$NewRESize = 990MB }
-		  }
-	} else { $NewRESize = 0 }
+			{	$NewRESize = 990MB }
+		}
+	}
+ else { $NewRESize = 0 }
 
 	Write-Host ""
 	Write-Host "Computing new System partition size. Please be patient ..."
@@ -131,12 +134,12 @@ $ResizeSystemPartition = {
 	If ([Math]::Abs($SystemPartition.Size - $NewSize) -gt 1MB) {
 		Try {
 			Resize-Partition -DiskId $SystemPartition.DiskID -Offset $SystemPartition.Offset -Size $NewSize -ErrorAction Stop
-		  }
+		}
 		Catch {
 			Write-Warning "Error during System partition resize. You should keep the backup of the Recovery partition."
 			Write-Warning "An attempt to restore a Recovery partition follows..."
-		 }
-	  }
+		}
+	}
 
 }
 
@@ -160,29 +163,29 @@ $CreateRecoveryPartition = {
 
 	If ($Disks.PartitionStyle -eq "GPT") {
 		## "Microsoft Recovery" partitions are created "hidden" and even DISKPART cannot clear this attribute. The
-        ## message "Virtual Disk Service error: The object is not found." is displayed when the user attempts to
-        ## display the volume attributes.
+		## message "Virtual Disk Service error: The object is not found." is displayed when the user attempts to
+		## display the volume attributes.
 
-        ## In order to avoid Windows Explorer from offering to format the new partition, it is created hidden and later exposed.
-        ## There is quite a bit of grief trying to get a consistent behavior across all Windows versions when a drive letter
-        ## is specified. (On Windows 11/Server 2022 the volume is accessible using two drive letters, try the command
-        ## 				get-psdrive -PSProvider FileSystem		# ;-)
+		## In order to avoid Windows Explorer from offering to format the new partition, it is created hidden and later exposed.
+		## There is quite a bit of grief trying to get a consistent behavior across all Windows versions when a drive letter
+		## is specified. (On Windows 11/Server 2022 the volume is accessible using two drive letters, try the command
+		## 				get-psdrive -PSProvider FileSystem		# ;-)
 		## Create a basic data partition 
 		## Create the partition "Hidden" to prevent darn thing ...
 
-Try {
-		$NewTarget = New-Partition -DiskPath $Disks.Path -AssignDriveLetter -GptType "{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}" -UseMaximumSize -IsHidden -ErrorAction Stop
+		Try {
+			$NewTarget = New-Partition -DiskPath $Disks.Path -AssignDriveLetter -GptType "{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}" -UseMaximumSize -IsHidden -ErrorAction Stop
 			## ... and expose it!
 			Set-Partition -InputObject $NewTarget -IsHidden $False 
-		$NewVolume = Format-Volume -Partition $NewTarget -Force -FileSystem NTFS -NewFileSystemLabel "Recovery"
+			$NewVolume = Format-Volume -Partition $NewTarget -Force -FileSystem NTFS -NewFileSystemLabel "Recovery"
 			# There is an explicit -DriveLetter assignment when the partition is created.
   }
-Catch {
-    Write-Warning $PSItem.Exception.Message
-	If ($Logging) { Stop-Transcript }
-	Exit 911
+		Catch {
+			Write-Warning $PSItem.Exception.Message
+			If ($Logging) { Stop-Transcript }
+			Exit 911
   }
-	<#
+		<#
         The instruction
 
             $NewTarget | Set-Partition -GptType "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}" -IsHidden $True -NoDefaultDriveLetter $True
@@ -215,7 +218,7 @@ Catch {
         letter on Windows 11 23H2 or no letter at all on earlier versions. Expect a phantom drive until
         reboot.
 	#>
-$DiskpartLog = $(@"
+		$DiskpartLog = $(@"
 select disk $($Disks.Number)
 select partition $($NewTarget.PartitionNumber)
 set id="de94bba4-06d1-4d40-a16a-bfd50179d6ac"
@@ -224,46 +227,46 @@ detail partition
 exit
 "@ | Diskpart)
 
-			If ($Verbose) {
-				Write-Host $($Capture | Out-String)
-				Write-Host $DiskpartLog | Out-String
-				Write-Host $($Capture | Out-String)
-			  }
+		If ($Verbose) {
+			Write-Host $($Capture | Out-String)
+			Write-Host $DiskpartLog | Out-String
+			Write-Host $($Capture | Out-String)
+		}
 	}
 	else {
 		## PowerShell has no MBRtype for "Microsoft Recovery" partitions
 		## Create a basic data partition and change its type
-		$NewTarget = New-Partition -DiskPath $Disks.Path -DriveLetter $UseLetter -MBRType IFS -UseMaximumSize
-    	$NewVolume = $NewTarget | Format-Volume -FileSystem NTFS -NewFileSystemLabel "Recovery"
+		$NewTarget = New-Partition -DiskPath $Disks.Path -DriveLetter $UseLetter -MbrType IFS -UseMaximumSize
+		$NewVolume = $NewTarget | Format-Volume -FileSystem NTFS -NewFileSystemLabel "Recovery"
 		# | Set-Volume -DriveLetter $UseLetter is implicit when the partition is created.
-		$NewTarget | Set-Partition -MBRType 0x27
-	  }
+		$NewTarget | Set-Partition -MbrType 0x27
+	}
 
 	Write-Host ""
 	Write-Host "Restoring the Windows RE partition ..."
 
 	## Do not override the user's assignment
 	$RemoveTemporaryAccess = $False
-	If ( [string]::IsNullOrEmpty($NewTarget.DriveLetter) -or ($NewTarget.DriveLetter -eq "`0") )
-	  { $LocalTarget = $NewTarget | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
+	If ( [string]::IsNullOrEmpty($NewTarget.DriveLetter) -or ($NewTarget.DriveLetter -eq "`0") ) {
+		$LocalTarget = $NewTarget | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
 		$LocalLetter = $UseLetter
 		Write-Host "Assigned drive letter $LocalLetter to the Recovery partition."
 		$RemoveTemporaryAccess = $True
-	  }
+	}
 	else {
 		$LocalLetter = $NewTarget.DriveLetter
 		Write-Host "Using drive letter $LocalLetter to access  the Recovery partition."
-	  }
+	}
 
 	## Create a skeleton directory structure
 	New-Item -Path "$LocalLetter`:\" -Name "Recovery" -ItemType "directory" -ErrorAction SilentlyContinue | Out-Null
 	New-Item -Path "$LocalLetter`:\Recovery" -Name "WindowsRE" -ItemType "directory" -ErrorAction SilentlyContinue | Out-Null
 	New-Item -Path "$LocalLetter`:\Recovery" -Name "Logs" -ItemType "directory" -ErrorAction SilentlyContinue | Out-Null
 
-    # Drop the temporary assignment
+	# Drop the temporary assignment
 	If ($RemoveTemporaryAccess) {
-		$LocalTarget = $LocalTarget | Remove-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-	  }
+		$LocalTarget = $LocalTarget | Remove-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+	}
 
 	Return $NewTarget
 }
@@ -346,49 +349,49 @@ $LocateWindowsREImage = {
 		## Do NOT enable Windows RE at this time since the state of the Recovery partition is unknown
 		## and "REagentC /Enable" might create the Recovery environment on the system drive.
 		$RELocation = "$([Environment]::SystemDirectory)\Recovery"
-	  }
+	}
 	else {
-			## Attempt to restore the Windows RE image from a source media.
-			If (Test-Path -Path "$SourcesDir\Install.wim" -IsValid) {
-				If (Test-Path -Path "$SourcesDir\Install.wim") {
-					Write-Warning "Restoring Winre.wim from the Windows install source. This is a long process, be patient ..."
-					$Decoy = $(New-Item -Type Directory -Path $env:TEMP -Name ([System.Guid]::NewGuid())).FullName
-					dism /Mount-Wim /ReadOnly /WimFile:"$SourcesDir\install.wim" /Index:1 /MountDir:"$Decoy"
-					## PowerShell has some limitations with system files!
-					Try {
-						Remove-Item -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -force -Confirm:$False `
-							-ErrorAction Stop
-					  }
-					Catch {
-						# Do Nothing!
-					  }
-					Finally {
-						Copy-Item  -LiteralPath "$Decoy\Windows\System32\Recovery\Winre.wim" `
-							-Destination "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -force -Confirm:$False `
-							-ErrorAction SilentlyContinue
-					  }
-					dism /Unmount-Wim /Discard /MountDir:"$Decoy"
-					Remove-Item -LiteralPath "$Decoy" -Force -Recurse
-					# Sanity check: did we get the image file?
-					If ((Get-ChildItem -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -Force -ErrorAction SilentlyContinue).Exists) {
-						Write-Warning "The Windows RE image was successfully restored from the installation media."
-						Write-Warning "Please see KB5034957: Updating the WinRE partition on deployed devices."
-						$RELocation = "$([Environment]::SystemDirectory)\Recovery"
-					  }
-					else {
-						Write-Warning "Cannot locate a Windows RE image file. Continuing witout a known Windows RE image ..."
-					  }
-				  }
+		## Attempt to restore the Windows RE image from a source media.
+		If (Test-Path -Path "$SourcesDir\Install.wim" -IsValid) {
+			If (Test-Path -Path "$SourcesDir\Install.wim") {
+				Write-Warning "Restoring Winre.wim from the Windows install source. This is a long process, be patient ..."
+				$Decoy = $(New-Item -Type Directory -Path $env:TEMP -Name ([System.Guid]::NewGuid())).FullName
+				dism /Mount-Wim /ReadOnly /WimFile:"$SourcesDir\install.wim" /Index:1 /MountDir:"$Decoy"
+				## PowerShell has some limitations with system files!
+				Try {
+					Remove-Item -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -Force -Confirm:$False `
+						-ErrorAction Stop
+				}
+				Catch {
+					# Do Nothing!
+				}
+				Finally {
+					Copy-Item  -LiteralPath "$Decoy\Windows\System32\Recovery\Winre.wim" `
+						-Destination "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -Force -Confirm:$False `
+						-ErrorAction SilentlyContinue
+				}
+				dism /Unmount-Wim /Discard /MountDir:"$Decoy"
+				Remove-Item -LiteralPath "$Decoy" -Force -Recurse
+				# Sanity check: did we get the image file?
+				If ((Get-ChildItem -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -Force -ErrorAction SilentlyContinue).Exists) {
+					Write-Warning "The Windows RE image was successfully restored from the installation media."
+					Write-Warning "Please see KB5034957: Updating the WinRE partition on deployed devices."
+					$RELocation = "$([Environment]::SystemDirectory)\Recovery"
+				}
 				else {
-						# Source installation image not found
-						Write-Warning "Cannot locate Install.wim. Continuing witout a known Windows RE image ..."
-				  }
-			  }
+					Write-Warning "Cannot locate a Windows RE image file. Continuing witout a known Windows RE image ..."
+				}
+			}
 			else {
-					# No valid path to a Windows source installation image
-					Write-Warning "$SourcesDir is an invalid path. Continuing witout a known Windows RE image ..."
-			  }
-	  }
+				# Source installation image not found
+				Write-Warning "Cannot locate Install.wim. Continuing witout a known Windows RE image ..."
+			}
+		}
+		else {
+			# No valid path to a Windows source installation image
+			Write-Warning "$SourcesDir is an invalid path. Continuing witout a known Windows RE image ..."
+		}
+	}
 
 	Return [String] $RELocation
 }
@@ -402,22 +405,22 @@ $LocateWindowsREImage = {
 $PopulateRecoveryPartition = {
 	[OutputType([CHAR])]
 	Param ($UseLetter)
-<#
+	<#
 	We need to ensure a measure of health before anything else.
 
 #>
 	## Do not override the user's assignment
 	$RemoveTemporaryAccess = $False
-	If ( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )
-	  { $LocalTarget = $Target | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
+	If ( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") ) {
+		$LocalTarget = $Target | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
 		$RELetter = $UseLetter
 		Write-Host "Assigned drive letter $RELetter to the Recovery partition."
 		$RemoveTemporaryAccess = $True
-	  }
+	}
 	else {
 		$RELetter = $Target.DriveLetter
 		Write-Host "Using drive letter $RELetter to access  the Recovery partition."
-	  }
+	}
 
 	## Create / Repair the contents of the Recovery partition
 	New-Item -Path "$RELetter`:\" -Name "Recovery" -ItemType "directory" -ErrorAction SilentlyContinue | Out-Null
@@ -426,8 +429,8 @@ $PopulateRecoveryPartition = {
 	
 	## Install a copy of the Recovery image in this location
 	Copy-Item -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" `
-				-Destination "$RELetter`:\Recovery\WindowsRE\Winre.wim" -force -Confirm:$False `
-				-ErrorAction SilentlyContinue
+		-Destination "$RELetter`:\Recovery\WindowsRE\Winre.wim" -Force -Confirm:$False `
+		-ErrorAction SilentlyContinue
 	
 	## Drop the Recovery entry
 	bcdedit /deletevalue "{current}" recoverysequence
@@ -438,8 +441,8 @@ $PopulateRecoveryPartition = {
 	## This does NOT enable the Recovery environment.
 	
 	If ($RemoveTemporaryAccess) {
-		$LocalTarget = $LocalTarget | Remove-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-	  }
+		$LocalTarget = $LocalTarget | Remove-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+	}
 
 	Return [CHAR] $UseLetter
 }
@@ -477,52 +480,52 @@ $BackupRecoveryPartition = {
 
 			# Get the drive letter from the partition instead of the volume
 			$TargetGuid = $CaptureDir -replace "^.+(\{.*\}).*", '$1'
-			$TargetPartition = Get-Partition | Where { $_.Guid -eq $TargetGuid }
+			$TargetPartition = Get-Partition | Where-Object { $_.Guid -eq $TargetGuid }
 
-			If ( [string]::IsNullOrEmpty($TargetPartition.DriveLetter) -or ($TargetPartition.DriveLetter -eq "`0") )
-			  { $TargetPartition = $TargetPartition | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-                $RELocation = $UseLetter
+			If ( [string]::IsNullOrEmpty($TargetPartition.DriveLetter) -or ($TargetPartition.DriveLetter -eq "`0") ) {
+				$TargetPartition = $TargetPartition | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+				$RELocation = $UseLetter
 				Write-Host "Assigned drive letter $UseLetter to", $CaptureDir
 				$RemoveTemporaryAccess = $True
-			  }
-            else {
-                $RELocation = $TargetPartition.DriveLetter
+			}
+			else {
+				$RELocation = $TargetPartition.DriveLetter
 				Write-Host "Using drive letter $RELocation to access", $CaptureDir
-              }
+			}
 			$RELocation = $RELocation + ":"
-		  }
+		}
 		elseif ($CaptureDir.StartsWith('\\?\GLOBALROOT\device\', 'CurrentCultureIgnoreCase')) {
-				$DiskNumber = $CaptureDir -replace "^\\\\\?\\GLOBALROOT\\device\\harddisk(\d+)\\partition\d+\\.*$", '$1'
-				$PartitionNumber = $CaptureDir -replace "^\\\\\?\\GLOBALROOT\\device\\harddisk\d+\\partition(\d+)\\.*$", '$1'
-				$TargetDir = $CaptureDir -replace "^\\\\\?\\GLOBALROOT\\device\\harddisk\d+\\partition\d+(\\.*)$", '$1'
-				$TargetPartition = Get-Partition | Where { ($_.DiskNumber -eq $DiskNumber) -and ($_.PartitionNumber -eq $PartitionNumber) }
+			$DiskNumber = $CaptureDir -replace "^\\\\\?\\GLOBALROOT\\device\\harddisk(\d+)\\partition\d+\\.*$", '$1'
+			$PartitionNumber = $CaptureDir -replace "^\\\\\?\\GLOBALROOT\\device\\harddisk\d+\\partition(\d+)\\.*$", '$1'
+			$TargetDir = $CaptureDir -replace "^\\\\\?\\GLOBALROOT\\device\\harddisk\d+\\partition\d+(\\.*)$", '$1'
+			$TargetPartition = Get-Partition | Where-Object { ($_.DiskNumber -eq $DiskNumber) -and ($_.PartitionNumber -eq $PartitionNumber) }
 
-			    If ( [string]::IsNullOrEmpty($TargetPartition.DriveLetter) -or ($TargetPartition.DriveLetter -eq "`0") )
-			      { $TargetPartition = $TargetPartition | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-                    $RELocation = $UseLetter
-				    Write-Host "Assigned drive letter $UseLetter to", $CaptureDir
-					$RemoveTemporaryAccess = $True
-			      }
-                else {
-                    $RELocation = $TargetPartition.DriveLetter
-				    Write-Host "Using drive letter $RELocation to access", $CaptureDir
-                  }
-			    $RELocation = $RELocation + ":"
-		     }
+			If ( [string]::IsNullOrEmpty($TargetPartition.DriveLetter) -or ($TargetPartition.DriveLetter -eq "`0") ) {
+				$TargetPartition = $TargetPartition | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+				$RELocation = $UseLetter
+				Write-Host "Assigned drive letter $UseLetter to", $CaptureDir
+				$RemoveTemporaryAccess = $True
+			}
+			else {
+				$RELocation = $TargetPartition.DriveLetter
+				Write-Host "Using drive letter $RELocation to access", $CaptureDir
+			}
+			$RELocation = $RELocation + ":"
+		}
 		else {
 			$RELocation = $CaptureDir
-		  }
+		}
 
 		# Get-FileHash can access the image fle but does not error on missing files!
 		# The directory structure is not consistent between the enabled and disabled states :
 		Try {
 			# a) Try the default location ...
 			$OriginalWimSignature = (Get-FileHash -Algorithm SHA256 -LiteralPath "$RELocation\Recovery\WindowsRE\Winre.wim" -ErrorAction Stop).Hash
-		  }
+		}
 		Catch {
 			# b) Try the backup location
 			$OriginalWimSignature = (Get-FileHash -Algorithm SHA256 -LiteralPath "$RELocation\Winre.wim" -ErrorAction SilentlyContinue).Hash
-		  }
+		}
 
 		If ($OriginalWimSignature -ne $Null) {
 
@@ -547,15 +550,15 @@ $BackupRecoveryPartition = {
 						\WindowsRE\Winre.wim
 						The operation completed successfully.
 				#>
-			  }
+			}
 			Write-Host "Windows RE SHA256 signature:", $OriginalWimSignature
 			Write-Host ""
-		  }
+		}
 		If ($RemoveTemporaryAccess) {
-			$TargetPartition = $TargetPartition | Remove-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-		  }
+			$TargetPartition = $TargetPartition | Remove-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+		}
 		
-	  }
+	}
 	Return $OriginalWimSignature # which may be unchanged
 }
 
@@ -605,25 +608,26 @@ If ($Logging) { Start-Transcript -Path "$($env:USERPROFILE)\Desktop\RecoveryPart
 [char]$UseLetter = "$UseLetter".ToUpper() # Traditionnal ;-)
 
 ## Some sanity checks
-	If ( $(Get-PSdrive "$UseLetter" -PSProvider FileSystem -ErrorAction SilentlyContinue) -ne $Null) `
-	  {	Write-Host "Drive $UseLetter is already in use."
-		If ($Logging) { Stop-Transcript }
-		Exit 911
-	  }
+If ( $(Get-PSDrive "$UseLetter" -PSProvider FileSystem -ErrorAction SilentlyContinue) -ne $Null) `
+{
+	Write-Host "Drive $UseLetter is already in use."
+	If ($Logging) { Stop-Transcript }
+	Exit 911
+}
 
-	# Get the ID and security principal of the current user account
-	$myWindowsID = [System.Security.Principal.WindowsIdentity]::GetCurrent();
-	$myWindowsPrincipal = New-Object System.Security.Principal.WindowsPrincipal($myWindowsID);
+# Get the ID and security principal of the current user account
+$myWindowsID = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+$myWindowsPrincipal = New-Object System.Security.Principal.WindowsPrincipal($myWindowsID)
 
-	# Get the security principal for the administrator role
-	$adminRole = [System.Security.Principal.WindowsBuiltInRole]::Administrator;
+# Get the security principal for the administrator role
+$adminRole = [System.Security.Principal.WindowsBuiltInRole]::Administrator
 
-	# Check to see if we are currently running as an administrator
-	if (!$myWindowsPrincipal.IsInRole($adminRole))
-	  { Write-Host "Administrative privileges are required to run this script."
-		If ($Logging) { Stop-Transcript }
-		Exit 911
-	  }
+# Check to see if we are currently running as an administrator
+if (!$myWindowsPrincipal.IsInRole($adminRole)) {
+ Write-Host "Administrative privileges are required to run this script."
+	If ($Logging) { Stop-Transcript }
+	Exit 911
+}
 
 ## Determine how much will be displayed
 [Boolean]$Verbose = $Details.IsPresent
@@ -667,17 +671,17 @@ Write-Host ""
 	The « Root\cimv2\Security\MicrosoftVolumeEncryption » Namespace may not exist.
 #>
 
-$SystemDrive =  (Get-WmiObject Win32_OperatingSystem).SystemDrive
+$SystemDrive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
 $BitLocker = Get-WmiObject -Namespace "Root\cimv2\Security\MicrosoftVolumeEncryption" -Class "Win32_EncryptableVolume" `
-				-Filter "DriveLetter = '$SystemDrive'" -ErrorAction SilentlyContinue
+	-Filter "DriveLetter = '$SystemDrive'" -ErrorAction SilentlyContinue
 If (-not $BitLocker) {
 	Write-Host "No BitLocker protection found for drive $SystemDrive."
-  }
+}
 elseif ( $BitLocker.GetProtectionStatus().protectionStatus -ne "0" ) {
 	Write-Warning "BitLocker is enabled on this system disk. Aborting ..."
 	If ($Logging) { Stop-Transcript }
 	Exit 911
- }
+}
 else { Write-Host "BitLocker is off on this system." } 
 Write-Host ""
 
@@ -687,20 +691,20 @@ Write-Host ""
 
 #>
 
-$SystemPath =  $SystemDrive + "\"
+$SystemPath = $SystemDrive + "\"
 $SystemPartition = $Null
 ForEach ($Partition in $(Get-Partition)) {
 	If ($Partition.AccessPaths.Count -gt 0) {
 		If ($Partition.AccessPaths.Contains($SystemPath)) {
 			$SystemPartition = $Partition
-		  }
-	  }
-  }
+		}
+	}
+}
 If ($SystemPartition -eq $Null) {
 	Write-Warning "Could not find the System partition!!!"
 	If ($Logging) { Stop-Transcript }
 	Exit 911
-  }
+}
 
 $Disks = Get-Disk -Number $SystemPartition.DiskNumber
 
@@ -724,7 +728,7 @@ If ($RELocation -eq $Null) {
 	$CaptureDir = &$LocateWindowsREImage ($RELocation)
 	# Presume there is a valid WindowsRE image file available
 	$RELocation = $CaptureDir
-  }
+}
 else {
 	# The Recovery environment may be accessible through GLOBALROOT
 	$CaptureDir = $RELocation -replace "(^*)\\WindowsRE", $1
@@ -733,12 +737,12 @@ $OriginalWimSignature = &$BackupRecoveryPartition("Recovery Environment")
 Write-Host ""
 
 If ($Verbose -and $RELocation -ne $Null) {
-	Write-Host $Separator -ForeGroundColor Green
+	Write-Host $Separator -ForegroundColor Green
 	Write-Host "Windows RE image attributes:"
 	Write-Host ""
 	Dism /Get-ImageInfo /ImageFile:"$RELocation\winre.wim" /index:1
-	Write-Host $Separator -ForeGroundColor Green
-  }
+	Write-Host $Separator -ForegroundColor Green
+}
 
 ForEach ($Disk in $Disks) {
 	$Partitions = Get-Partition -DiskNumber $SystemPartition.DiskNumber
@@ -752,62 +756,62 @@ ForEach ($Disk in $Disks) {
 		Write-Host
 		If ($Verbose) {
 			## Provide a short description of this disk
-			$Disk | fl PartitionStyle, FriendlyName, GUID
+			$Disk | Format-List PartitionStyle, FriendlyName, GUID
 			## Dump the partition table: don't rely on the order of the display
-			$Partitions | ft Type, IsSystem, AccessPaths, GptType, MBRType, Size
+			$Partitions | Format-Table Type, IsSystem, AccessPaths, GptType, MBRType, Size
 		}
 	}
 	If ($Partitions.Count -gt 1) {
 		ForEach ($Partition in $Partitions) {
 			If ($Partition.AccessPaths.Count -gt 0) {
 				If ( (($Disk.PartitionStyle -eq "MBR" -and $Partition.MBRType -eq 0x27) `
-						-or ($Disk.PartitionStyle -eq "GPT" -and $Partition.GptType -eq "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}") ) `
-					-and $Partition.Offset -gt $SystemPartition.Offset ) {
+							-or ($Disk.PartitionStyle -eq "GPT" -and $Partition.GptType -eq "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}") ) `
+						-and $Partition.Offset -gt $SystemPartition.Offset ) {
 
 					## Get-Children cannot access a volume using its \\?\Volume... designation
 					$RemoveTemporaryAccess = $False
-					If ( [string]::IsNullOrEmpty($Partition.DriveLetter) -or ($Partition.DriveLetter -eq "`0") )
-					  { $LocalTarget = $Partition | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
+					If ( [string]::IsNullOrEmpty($Partition.DriveLetter) -or ($Partition.DriveLetter -eq "`0") ) {
+						$LocalTarget = $Partition | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
 						$LocalLetter = $UseLetter
 						$RemoveTemporaryAccess = $True
-					  }
+					}
 					else {
 						$LocalLetter = $Partition.DriveLetter
-					  }
+					}
 
 					$ThisRoot = If ($Partition.AccessPaths.Gettype().BaseType.Name -eq "Array") `
-                        			{ $Partition.AccessPaths[$Partition.AccessPaths.Count - 1] }
-                                else { $Partition.AccessPaths }
+					{ $Partition.AccessPaths[$Partition.AccessPaths.Count - 1] }
+					else { $Partition.AccessPaths }
 					Write-Host "Testing:", $ThisRoot, "Using $LocalLetter`:"
 					
 					Try {
-							## Note: Test-Path will not return a value for hidden/system objects.
-							## In the default name space (drive letter), a suffix "\..\" is required to find the directory, which does not seem coherent
-							## We have direct access to the directory using the global name space...
-							## ... and this may point to a healthy Recovery partition which has a number of subdirectories
-							$WinRE = Get-ChildItem -Attributes Directory,Directory+Hidden -Path $($LocalLetter+"`:Recovery\") `
-										-Directory -Depth 0 -Exclude "System Volume Information" -Force -ErrorAction Stop
-							If ($WinRe.Count -ge 1) {
-								Write-Host $ThisRoot, "is an apparent Recovery partition" -ForegroundColor Green
-								If ($(Read-Host "Enter 'Yes' to select this partition as the target recovery partition, anything else to continue").tolower().StartsWith('yes')) {
-									## Note: the above manipulations do not effect the local variables
-									$Target = $Partition
-								 }
-							  }
-					  }
+						## Note: Test-Path will not return a value for hidden/system objects.
+						## In the default name space (drive letter), a suffix "\..\" is required to find the directory, which does not seem coherent
+						## We have direct access to the directory using the global name space...
+						## ... and this may point to a healthy Recovery partition which has a number of subdirectories
+						$WinRE = Get-ChildItem -Attributes Directory, Directory+Hidden -Path $($LocalLetter + "`:Recovery\") `
+							-Directory -Depth 0 -Exclude "System Volume Information" -Force -ErrorAction Stop
+						If ($WinRe.Count -ge 1) {
+							Write-Host $ThisRoot, "is an apparent Recovery partition" -ForegroundColor Green
+							If ($(Read-Host "Enter 'Yes' to select this partition as the target recovery partition, anything else to continue").tolower().StartsWith('yes')) {
+								## Note: the above manipulations do not effect the local variables
+								$Target = $Partition
+							}
+						}
+					}
 					Catch {
 						If ($Verbose) { Write-Host "-> Ignored" }
-					  }
+					}
 
 					## Drop the temporary assignment: there may be more than one Recovery partition
 					If ($RemoveTemporaryAccess) {
-						$LocalTarget = $LocalTarget | Remove-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-					  }
-				  }
-			  }
-		  }
-	  }
-  }
+						$LocalTarget = $LocalTarget | Remove-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+					}
+				}
+			}
+		}
+	}
+}
 
 <#
 	At this point, we may have a recovery partition, we may have a Windows RE image file, and/or we may have some free space.
@@ -823,7 +827,7 @@ If ($RELocation -eq "$([Environment]::SystemDirectory)\Recovery") {
 		## Do not attempt to salvage the user identified Recovery partition
 		Write-Host "Removing inactive WindowsRE partition..."
 		If (!( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )) `
-			{ Remove-PartitionAccessPath -DiskNumber $Disk.Number -PartitionNumber $Target.PartitionNumber -AccessPath $($Target.DriveLetter+":\") }
+		{ Remove-PartitionAccessPath -DiskNumber $Disk.Number -PartitionNumber $Target.PartitionNumber -AccessPath $($Target.DriveLetter + ":\") }
 		Remove-Partition -DiskId $Target.DiskID -Offset $Target.Offset -Confirm:$False
 		$Target = $Null
 	}
@@ -836,37 +840,37 @@ If ($RELocation -eq "$([Environment]::SystemDirectory)\Recovery") {
 	$RELocated = $True
 
 	# This SHOULD create all required BCD entries corresponding to the new location and populate the partition
-    ReagentC /enable
+	ReagentC /enable
 
 	# Get the BCD entry from the ReAgent configuraton file
 	$REAgentData = New-Object xml
-	$REAgentData.Load( (Convert-Path $([System.Environment]::SystemDirectory+"\Recovery\ReAgent.xml") ) )
+	$REAgentData.Load( (Convert-Path $([System.Environment]::SystemDirectory + "\Recovery\ReAgent.xml") ) )
 	$WindowsRELoader = $REAgentData.WindowsRE.WinreBCD.id
 
 	# Note: ReagentC/Windows manipulate the access path of the new RE partition. Don't trust anything...
 	#		The partition can still be accessed using $UseLetter later on
 	$CaptureDir = If ($Target.AccessPaths.Gettype().BaseType.Name -eq "Array") `
-                    	{ $Target.AccessPaths[$Target.AccessPaths.Count - 1] }
-                  else	{ $Target.AccessPaths }
+	{ $Target.AccessPaths[$Target.AccessPaths.Count - 1] }
+	else	{ $Target.AccessPaths }
 	$TargetSignature = &$BackupRecoveryPartition("Reconstructed Recovery Partition")
 
 	If ($TargetSignature -ne $OriginalWimSignature) {
 		Write-Warning "The signature of the restored Recovery environment does not match the original"
 		Write-Warning "Leaving the Windows RE status as is."
-	  }
+	}
 	
 	# Claim free space contiguous to the system partition.
 	&$ResizeSystemPartition( 0 )
-  }
+}
 else {
 	## Force enable the Recovery environment (which is still untouched ;-)
 	## This has no impact if it is already enabled.
 	ReagentC /enable
 
 	$REAgentData = New-Object xml
-	$REAgentData.Load( (Convert-Path $([System.Environment]::SystemDirectory+"\Recovery\ReAgent.xml") ) )
+	$REAgentData.Load( (Convert-Path $([System.Environment]::SystemDirectory + "\Recovery\ReAgent.xml") ) )
 	$WindowsRELoader = $REAgentData.WindowsRE.WinreBCD.id
-  }
+}
 
 ## Test if the Recovery environment is available on this system
 Try {
@@ -875,28 +879,28 @@ Try {
 		Write-Warning ""
 		If ($Logging) { Stop-Transcript }
 		Exit 911
-	  }
+	}
 
 	$WindowsRELoaderOptions = $(bcdedit /enum $WindowsRELoader | Select-String -Pattern '^device') -replace "^.*{", "{"
 	$SanityCheck = $WindowsRELoaderOptions -eq $($(bcdedit /enum $WindowsRELoader | Select-String -Pattern '^osdevice') -replace "^.*{", "{")
 	If ( !$SanityCheck) { Write-Warning "The device and osdevice parameters in BCD entry $WindowsRELoader should be identical!" }
 
-  }
+}
 Catch {
 	Write-Warning "The following error occured trying to get the current Recovery partition setup:"
 	Write-Warning $_
 	If ($Logging) { Stop-Transcript }
 	Exit 911
- }
+}
 
 
 If ($Verbose) {
 	$ReagentC = ReagentC /Info
-	Write-Host $Separator -ForeGroundColor Green
-	Write-Host $($ReagentC | Select-String -Pattern '.*Win.*RE.*' | Out-String ) -NoNewLine
-	Write-Host $($ReagentC | Select-String -Pattern 'BCD' | Out-String ) -NoNewLine
+	Write-Host $Separator -ForegroundColor Green
+	Write-Host $($ReagentC | Select-String -Pattern '.*Win.*RE.*' | Out-String ) -NoNewline
+	Write-Host $($ReagentC | Select-String -Pattern 'BCD' | Out-String ) -NoNewline
 	Write-Host ""
-	Write-Host $Separator -ForeGroundColor Green
+	Write-Host $Separator -ForegroundColor Green
 
 	## Display the Recovery Environment status on this system
 	## Note: the display will reflect the partition letter assigned to the recovery partition.
@@ -908,35 +912,35 @@ If ($Verbose) {
 
 		## Attempt to beautify the output without overriding the user's assignment
 		$RemoveTemporaryAccess = $False
-		If ( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )
-		  { $Target = $Target | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
+		If ( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") ) {
+			$Target = $Target | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
 			$RELetter = $UseLetter
 			Write-Host "Assigned drive letter $RELetter to the EXISTING Recovery partition."
 			$RemoveTemporaryAccess = $True
-		  }
+		}
 		else {
 			$RELetter = $Target.DriveLetter
 			Write-Host "Using drive letter $RELetter to access the EXISTING Recovery partition."
-		  }
+		}
 
-		Write-Host $(bcdedit /enum $WindowsRELoader | Out-String) -NoNewLine
-		Write-Host $(bcdedit /enum $WindowsRELoaderOptions | Out-String) -NoNewLine
+		Write-Host $(bcdedit /enum $WindowsRELoader | Out-String) -NoNewline
+		Write-Host $(bcdedit /enum $WindowsRELoaderOptions | Out-String) -NoNewline
 
 		If ($RemoveTemporaryAccess) {
-			$Target = $Target | Remove-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
-		  }
+			$Target = $Target | Remove-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
+		}
 		Write-Host ""
-	  }
-	Write-Host $Separator -ForeGroundColor Green
-  }
+	}
+	Write-Host $Separator -ForegroundColor Green
+}
 
-	$SanityCheck = $SystemPartition.Guid -ne $Target.Guid
-	If ( !$SanityCheck ) {
-		Write-Error "Internal programming error: quit while you're ahead."
-		If ($Logging) { Stop-Transcript }
-		Exit 911
+$SanityCheck = $SystemPartition.Guid -ne $Target.Guid
+If ( !$SanityCheck ) {
+	Write-Error "Internal programming error: quit while you're ahead."
+	If ($Logging) { Stop-Transcript }
+	Exit 911
 
-	  }
+}
 ##
 <#
 	There is no simple activation sequence for restoring the recovery partition.
@@ -950,18 +954,18 @@ if ($Target -ne $Null -and !$RElocated) {
 	# Note: we don't know that the backup we took on entry is from the partition
 	# selected by the user.
 	$CaptureDir = If ($Target.AccessPaths.Gettype().BaseType.Name -eq "Array") `
-                    	{ $Target.AccessPaths[$Target.AccessPaths.Count - 1] }
-                  else	{ $Target.AccessPaths }
+	{ $Target.AccessPaths[$Target.AccessPaths.Count - 1] }
+	else	{ $Target.AccessPaths }
 	$TargetSignature = &$BackupRecoveryPartition("Recovery Partition")
 	If ($TargetSignature -ne $Null) { $OriginalWimSignature = $TargetSignature }
 	
 	$PreviousPartitionSize = $Target.Size
 
 	Write-Host "Removing active WindowsRE partition..."
-    If (!( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )) `
-        { Remove-PartitionAccessPath -DiskNumber $Disk.Number -PartitionNumber $Target.PartitionNumber -AccessPath $($Target.DriveLetter+":\") }
+	If (!( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )) `
+	{ Remove-PartitionAccessPath -DiskNumber $Disk.Number -PartitionNumber $Target.PartitionNumber -AccessPath $($Target.DriveLetter + ":\") }
 	Remove-Partition -DiskId $Target.DiskID -Offset $Target.Offset -Confirm:$False
-<#
+	<#
 	This is an undocumented Windows feature: the Recovery image is also deleted
 	from [Environment]::SystemDirectory)\Recovery:
 
@@ -985,25 +989,25 @@ if ($Target -ne $Null -and !$RElocated) {
 	$NewTarget = &$CreateRecoveryPartition ($UseLetter)
 	## Do not override the user's assignment
 	$RemoveTemporaryAccess = $False
-	If ( [string]::IsNullOrEmpty($NewTarget.DriveLetter) -or ($NewTarget.DriveLetter -eq "`0") )
-	  { $LocalTarget = $NewTarget | Add-PartitionAccessPath -AccessPath $($UseLetter+"`:") -Passthru
+	If ( [string]::IsNullOrEmpty($NewTarget.DriveLetter) -or ($NewTarget.DriveLetter -eq "`0") ) {
+		$LocalTarget = $NewTarget | Add-PartitionAccessPath -AccessPath $($UseLetter + "`:") -PassThru
 		$LocalLetter = $UseLetter
 		Write-Host "Assigned drive letter $LocalLetter to the Recovery partition."
 		$RemoveTemporaryAccess = $True
-	  }
+	}
 	else {
 		$LocalLetter = $NewTarget.DriveLetter
 		Write-Host "Using drive letter $LocalLetter to access  the Recovery partition."
-	  }
+	}
 
 	## Fix the BCD
 	bcdedit /create "$WindowsRELoaderOptions" /Device | Out-Null
 	bcdedit /set "$WindowsRELoaderOptions" ramdisksdipath \Recovery\WindowsRE\boot.sdi
 	bcdedit /set "$WindowsRELoaderOptions" ramdisksdidevice partition="$LocalLetter`:"
-	bcdedit /set "$WindowsRELoader" device ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim,"$WindowsRELoaderOptions"
-	bcdedit /set "$WindowsRELoader" osdevice ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim,"$WindowsRELoaderOptions"
+	bcdedit /set "$WindowsRELoader" device ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim, "$WindowsRELoaderOptions"
+	bcdedit /set "$WindowsRELoader" osdevice ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim, "$WindowsRELoaderOptions"
 
-<#
+	<#
 	The recovery partition is restored from backup.
 
 	Since a new Recovery partition is initialized without the need for the ...\System21\Recovery intermediate storage,
@@ -1025,12 +1029,12 @@ if ($Target -ne $Null -and !$RElocated) {
 		If ($RestoredWimSignature -ne $OriginalWimSignature) {
 			Write-Warning "The signature of the restored Recovery environment does not match the original"
 			Write-Warning "Leaving the Windows RE status as is."
-		  }
+		}
 		else {
 			## Again, force enable the Recovery environment
 			REagentC /Enable
-		  }
-	  }
+		}
+	}
 	Catch {
 		## In case of any and all errors, exit and leave the backup.
 		Write-Warning "The following error occured trying to restore the Recovery partition setup:"
@@ -1045,93 +1049,95 @@ if ($Target -ne $Null -and !$RElocated) {
 	##       be related easily to drive and partition numbers.
 	If ($Verbose) {
 		$ReagentC = ReagentC /Info
-		Write-Host $Separator -ForeGroundColor Green
-		Write-Host $($ReagentC | Select-String -Pattern '.*Win.*RE.*' | Out-String ) -NoNewLine
-		Write-Host $($ReagentC | Select-String -Pattern 'BCD' | Out-String ) -NoNewLine
-		Write-Host $(bcdedit /enum "$WindowsRELoader" | Out-String) -NoNewLine
-		Write-Host $(bcdedit /enum "$WindowsRELoaderOptions" | Out-String) -NoNewLine
+		Write-Host $Separator -ForegroundColor Green
+		Write-Host $($ReagentC | Select-String -Pattern '.*Win.*RE.*' | Out-String ) -NoNewline
+		Write-Host $($ReagentC | Select-String -Pattern 'BCD' | Out-String ) -NoNewline
+		Write-Host $(bcdedit /enum "$WindowsRELoader" | Out-String) -NoNewline
+		Write-Host $(bcdedit /enum "$WindowsRELoaderOptions" | Out-String) -NoNewline
 		If ( !$SanityCheck) { Write-Warning "The device and osdevice parameters should be identical!" }
-		Write-Host $Separator -ForeGroundColor Green
-	  }
-##
+		Write-Host $Separator -ForegroundColor Green
+	}
+	##
 	Write-Host "Removing drive letter $UseLetter..."
-    ## Do NOT trust the drive letter: ReagentC is acting on its own!
-    $Lint = Get-Partition -DiskNumber $SystemPartition.DiskNumber -PartitionNumber $NewTarget.PartitionNumber
-	If ( !([string]::IsNullOrEmpty($Lint.DriveLetter) -or ($Lint.DriveLetter -eq "`0")) )
-      { # OK, we have a real drive letter, get rid of it
-        $ThisPath = If ($Lint.AccessPaths.Gettype().BaseType.Name -eq "Array") `
-                     	{ $Lint.AccessPaths[0] }
-                else	{ $Lint.AccessPaths }
-	    $R = Remove-PartitionAccessPath -DiskNumber $SystemPartition.DiskNumber -PartitionNumber $Lint.PartitionNumber -AccessPath $ThisPath
-      }
+	## Do NOT trust the drive letter: ReagentC is acting on its own!
+	$Lint = Get-Partition -DiskNumber $SystemPartition.DiskNumber -PartitionNumber $NewTarget.PartitionNumber
+	If ( !([string]::IsNullOrEmpty($Lint.DriveLetter) -or ($Lint.DriveLetter -eq "`0")) ) {
+		# OK, we have a real drive letter, get rid of it
+		$ThisPath = If ($Lint.AccessPaths.Gettype().BaseType.Name -eq "Array") `
+		{ $Lint.AccessPaths[0] }
+		else	{ $Lint.AccessPaths }
+		$R = Remove-PartitionAccessPath -DiskNumber $SystemPartition.DiskNumber -PartitionNumber $Lint.PartitionNumber -AccessPath $ThisPath
+	}
 	Write-Host ""
 	If ($(Read-Host "Enter 'Yes' to delete the backup of the recovery partition in"$($Env:Temp)", anything else to continue").tolower().StartsWith('yes')) {
-				Remove-Item -Path $($Env:Temp+"\Recovery.wim")
-			  }
+		Remove-Item -Path $($Env:Temp + "\Recovery.wim")
+	}
 
 	# Claim free space contiguous to the system partition.
 	&$ResizeSystemPartition( 0 )
- }
+}
 
 ## Dump all Recovery partitions accessible on this system
 ## Remember: the "partiton" object has both MBR and UEFI type fields.
 $RecoveryPartitions = @( $(( Get-Partition | Where-Object { ($_.MBRType -eq 0x27) `
-	-or ($_.GptType -eq "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}") })) )
+					-or ($_.GptType -eq "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}") })) )
 If ($RecoveryPartitions -ne $Null) {
 	Write-Host ""
 	Write-Host "Recovery Partition(s) available on this system:"
 	Write-Host ""
-	 ForEach ($Partition in $RecoveryPartitions) { 
+	ForEach ($Partition in $RecoveryPartitions) { 
 		Write-Host "     Disk number:", $Partition.DiskNumber
 		Write-Host "Partition number:", $Partition.PartitionNumber
-		Write-Host ( ($Partition.AccessPaths -replace "^","     Access path: ") -join "`n" )
-		If ( !([string]::IsNullOrEmpty($Partition.DriveLetter) -or ($Partition.DriveLetter -eq "`0")) )
-		  { # OK, we have a real drive letter, get rid of it
+		Write-Host ( ($Partition.AccessPaths -replace "^", "     Access path: ") -join "`n" )
+		If ( !([string]::IsNullOrEmpty($Partition.DriveLetter) -or ($Partition.DriveLetter -eq "`0")) ) {
+			# OK, we have a real drive letter, get rid of it
 			If ($Partition.AccessPaths.Gettype().BaseType.Name -eq "Array") `
-					{ $ThisPath = $Partition.AccessPaths[0] }
+			{ $ThisPath = $Partition.AccessPaths[0] }
 			else	{ $ThisPath = $Partition.AccessPaths }
 
 			Write-Warning "Removing access path $ThisPath"
 			$R = Remove-PartitionAccessPath -DiskNumber $Partition.DiskNumber -PartitionNumber $Partition.PartitionNumber -AccessPath $ThisPath
-		  }
-		Write-Host ""
 		}
-  }
-else {	Write-Warning "There are no Recovery Partitions on this system."
 		Write-Host ""
-  }
+	}
+}
+else {
+	Write-Warning "There are no Recovery Partitions on this system."
+	Write-Host ""
+}
 
 ## Identify phantom drives
 $DriveLetters = (Get-PSDrive -PSProvider FileSystem).Name
 $SuggestReboot = $False
 ForEach ($DriveLetter in $DriveLetters) {
-    If ( $DriveLetter.Length -eq 1 ) {
-        If ( "$DriveLetter`:\" -eq (Get-PSDrive $DriveLetter).Root )
-          {
-            Try { $Void = Get-Volume -DriveLetter $Driveletter -ErrorAction Stop }
-            Catch { Write-Warning "Drive $DriveLetter`:\ is a phantom drive."
-                    $SuggestReboot = $True }
-          }
-    }
+	If ( $DriveLetter.Length -eq 1 ) {
+		If ( "$DriveLetter`:\" -eq (Get-PSDrive $DriveLetter).Root ) {
+			Try { $Void = Get-Volume -DriveLetter $Driveletter -ErrorAction Stop }
+			Catch {
+				Write-Warning "Drive $DriveLetter`:\ is a phantom drive."
+				$SuggestReboot = $True 
+			}
+		}
+	}
 }
-If ($SuggestReboot )
-  {	Write-Warning "You should reboot this system to remove phantom drives potentially created by PowerShell during this script."
+If ($SuggestReboot ) {
+	Write-Warning "You should reboot this system to remove phantom drives potentially created by PowerShell during this script."
 	Write-Host ""
-  }
+}
 
 <#
 	Display version and service pack level of current Recovery environment
 #>
 
-$WIM = $($(REagentC /Info | Select-String -Pattern 'GLOBALROOT') -replace '^.*\s', '')+"\Winre.wim"
+$WIM = $($(REagentC /Info | Select-String -Pattern 'GLOBALROOT') -replace '^.*\s', '') + "\Winre.wim"
 If ($WIM -ne $Null) {
-	Write-Host "Active WinRE version information" -ForeGroundColor Green
-	Write-Host $Separator -ForeGroundColor Green
+	Write-Host "Active WinRE version information" -ForegroundColor Green
+	Write-Host $Separator -ForegroundColor Green
 	$WIMAttributes = Dism /Get-ImageInfo /ImageFile:$WIM /Index:1
-	Write-Host $($WIMAttributes | Select-String -Pattern 'Version' | Out-String ).Trim() -ForeGroundColor Green
-	Write-Host $($WIMAttributes | Select-String -Pattern 'Pack' | Out-String ).Trim() -ForeGroundColor Green
+	Write-Host $($WIMAttributes | Select-String -Pattern 'Version' | Out-String ).Trim() -ForegroundColor Green
+	Write-Host $($WIMAttributes | Select-String -Pattern 'Pack' | Out-String ).Trim() -ForegroundColor Green
 	Write-Host ""
-  }
+}
 
 ## Display the Disk Management Consoles
 diskmgmt.msc
