@@ -1,6 +1,6 @@
 ##******************************************************************
 ##
-## Revision date: 2024.03.13
+## Revision date: 2024.05.12
 ##
 ## Copyright (c) 2023-2024 PC-Évolution enr.
 ## This code is licensed under the GNU General Public License (GPL).
@@ -41,6 +41,9 @@
 ##					- Cleanup phantom drives, if at all possible.
 ##		2024.02.19:	- Identify phantom drives and cleanup related warnings.
 ##					- Add administrator privilegs check
+##		2024.05.12: Verify that all disks are healthy. Resize-Partition will not Process
+##					a dirty partition and the user may end up with a recover partition the
+##					size of all remaining free space on the disk.
 ##
 ##******************************************************************
 
@@ -608,9 +611,17 @@ If ($Logging) { Start-Transcript -Path "$($env:USERPROFILE)\Desktop\RecoveryPart
 [char]$UseLetter = "$UseLetter".ToUpper() # Traditionnal ;-)
 
 ## Some sanity checks
-If ( $(Get-PSDrive "$UseLetter" -PSProvider FileSystem -ErrorAction SilentlyContinue) -ne $Null) `
+If ( $Null -ne $(Get-PSDrive "$UseLetter" -PSProvider FileSystem -ErrorAction SilentlyContinue)) `
 {
 	Write-Host "Drive $UseLetter is already in use."
+	If ($Logging) { Stop-Transcript }
+	Exit 911
+}
+
+$Concerns = @(Get-Volume | Where-Object { $_.HealthStatus -ne "Healthy" })
+If ($Concerns.Count -gt 0) {
+	Write-Warning "Repair these drives before relocating the recovery partition:"
+	$Concerns | Format-Table DriveLetter, FriendlyName, FileSystemType, DriveType, HealthStatus, OperationalStatus
 	If ($Logging) { Stop-Transcript }
 	Exit 911
 }
@@ -700,7 +711,7 @@ ForEach ($Partition in $(Get-Partition)) {
 		}
 	}
 }
-If ($SystemPartition -eq $Null) {
+If ($Null -eq $SystemPartition) {
 	Write-Warning "Could not find the System partition!!!"
 	If ($Logging) { Stop-Transcript }
 	Exit 911
@@ -723,7 +734,7 @@ $Target = $Null
 #>
 
 $RELocation = $($(REagentC /Info | Select-String -Pattern 'GLOBALROOT') -replace '^.*\s', '')
-If ($RELocation -eq $Null) {
+If ($Null -eq $RELocation) {
 	Write-Warning "The Recovery environment is currently disabled."
 	$CaptureDir = &$LocateWindowsREImage ($RELocation)
 	# Presume there is a valid WindowsRE image file available
@@ -736,7 +747,7 @@ else {
 $OriginalWimSignature = &$BackupRecoveryPartition("Recovery Environment")
 Write-Host ""
 
-If ($Verbose -and $RELocation -ne $Null) {
+If ($Verbose -and ($Null -ne $RELocation)) {
 	Write-Host $Separator -ForegroundColor Green
 	Write-Host "Windows RE image attributes:"
 	Write-Host ""
@@ -823,7 +834,7 @@ ForEach ($Disk in $Disks) {
 #>
 $RELocated = $False
 If ($RELocation -eq "$([Environment]::SystemDirectory)\Recovery") {
-	If ($Target -ne $Null) {
+	If ($Null -ne $Target) {
 		## Do not attempt to salvage the user identified Recovery partition
 		Write-Host "Removing inactive WindowsRE partition..."
 		If (!( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )) `
@@ -906,7 +917,7 @@ If ($Verbose) {
 	## Note: the display will reflect the partition letter assigned to the recovery partition.
 	##       BCDEdit wil use the [\Device\HarddiskVolume...] name space otherwise which cannot
 	##       be related easily to drive and partition numbers.
-	if ($Target -ne $Null) {
+	if ($Null -ne $Target) {
 		Write-Host ""
 		Write-Host "Current Recovery partition BCD entries:" -ForegroundColor Green
 
@@ -949,7 +960,7 @@ If ( !$SanityCheck ) {
 #>
 ##
 	  
-if ($Target -ne $Null -and !$RElocated) {
+if (($Null -ne $Target) -and !$RElocated) {
 
 	# Note: we don't know that the backup we took on entry is from the partition
 	# selected by the user.
@@ -957,7 +968,7 @@ if ($Target -ne $Null -and !$RElocated) {
 	{ $Target.AccessPaths[$Target.AccessPaths.Count - 1] }
 	else	{ $Target.AccessPaths }
 	$TargetSignature = &$BackupRecoveryPartition("Recovery Partition")
-	If ($TargetSignature -ne $Null) { $OriginalWimSignature = $TargetSignature }
+	If ($Null -ne $TargetSignature) { $OriginalWimSignature = $TargetSignature }
 	
 	$PreviousPartitionSize = $Target.Size
 
@@ -1081,7 +1092,7 @@ if ($Target -ne $Null -and !$RElocated) {
 ## Remember: the "partiton" object has both MBR and UEFI type fields.
 $RecoveryPartitions = @( $(( Get-Partition | Where-Object { ($_.MBRType -eq 0x27) `
 					-or ($_.GptType -eq "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}") })) )
-If ($RecoveryPartitions -ne $Null) {
+If ($Null -ne $RecoveryPartitions) {
 	Write-Host ""
 	Write-Host "Recovery Partition(s) available on this system:"
 	Write-Host ""
@@ -1130,7 +1141,7 @@ If ($SuggestReboot ) {
 #>
 
 $WIM = $($(REagentC /Info | Select-String -Pattern 'GLOBALROOT') -replace '^.*\s', '') + "\Winre.wim"
-If ($WIM -ne $Null) {
+If ($Null -ne $WIM) {
 	Write-Host "Active WinRE version information" -ForegroundColor Green
 	Write-Host $Separator -ForegroundColor Green
 	$WIMAttributes = Dism /Get-ImageInfo /ImageFile:$WIM /Index:1
