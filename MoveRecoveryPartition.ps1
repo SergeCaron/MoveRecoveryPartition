@@ -44,6 +44,7 @@
 ##		2024.05.12: Verify that all disks are healthy. Resize-Partition will not Process
 ##					a dirty partition and the user may end up with a recover partition the
 ##					size of all remaining free space on the disk.
+##		2025.02.18:	Force [UInt64] on all partition size computations
 ##
 ##******************************************************************
 
@@ -124,10 +125,10 @@ $ResizeSystemPartition = {
 		## See https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/hard-drives-and-partitions?view=windows-11
 		If ($NewRESize -lt 990MB) {
 			If ($(Read-Host "Enter 'Yes' to use the recommended minimum partition size of 990MB for Windows RE, anything else to continue").tolower().StartsWith('yes')) `
-			{	$NewRESize = 990MB }
+			{	$NewRESize = [UInt64] 990MB }
 		}
 	}
- else { $NewRESize = 0 }
+ else { $NewRESize = [UInt64] 0 }
 
 	Write-Host ""
 	Write-Host "Computing new System partition size. Please be patient ..."
@@ -844,7 +845,7 @@ If ($RELocation -eq "$([Environment]::SystemDirectory)\Recovery") {
 	}
 
 	# Presume a minimum partition size (see MS KB5034439/KB5034441)
-	&$ResizeSystemPartition ( (Get-Item -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -Force).Length + 300MB )
+	&$ResizeSystemPartition ( [UInt64] (Get-Item -Path "$([Environment]::SystemDirectory)\Recovery\Winre.wim" -Force).Length + 300MB )
 	$SystemPartition = $SystemPartition | Get-Partition
 
 	$Target = &$CreateRecoveryPartition ($UseLetter)
@@ -871,7 +872,7 @@ If ($RELocation -eq "$([Environment]::SystemDirectory)\Recovery") {
 	}
 	
 	# Claim free space contiguous to the system partition.
-	&$ResizeSystemPartition( 0 )
+	&$ResizeSystemPartition( [UInt64] 0 )
 }
 else {
 	## Force enable the Recovery environment (which is still untouched ;-)
@@ -970,7 +971,7 @@ if (($Null -ne $Target) -and !$RElocated) {
 	$TargetSignature = &$BackupRecoveryPartition("Recovery Partition")
 	If ($Null -ne $TargetSignature) { $OriginalWimSignature = $TargetSignature }
 	
-	$PreviousPartitionSize = $Target.Size
+	$PreviousPartitionSize = [UInt64] $Target.Size
 
 	Write-Host "Removing active WindowsRE partition..."
 	If (!( [string]::IsNullOrEmpty($Target.DriveLetter) -or ($Target.DriveLetter -eq "`0") )) `
@@ -1085,7 +1086,7 @@ if (($Null -ne $Target) -and !$RElocated) {
 	}
 
 	# Claim free space contiguous to the system partition.
-	&$ResizeSystemPartition( 0 )
+	&$ResizeSystemPartition( [UInt64] 0 )
 }
 
 ## Dump all Recovery partitions accessible on this system
