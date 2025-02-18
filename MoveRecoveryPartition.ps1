@@ -119,7 +119,7 @@ $ResizeSystemPartition = {
 	# Compute a Recovery partition size, if it is going to be contiguous to the system partition.
 	If ($FreeSizeRequired -gt 0) {
 		If ($ExtendedSize -lt 1MB) { $ExtendedSize = $ExtendedSize * 1MB }
-		$NewRESize = [UInt64] [math]::Max( $ExtendedSize, $FreeSizeRequired )
+		$NewRESize = [UInt64] [math]::Max( [UInt64] $ExtendedSize, [UInt64] $FreeSizeRequired )
 		
 		## For Windows 11, the recommended recovery partition size is 990MB
 		## See https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/hard-drives-and-partitions?view=windows-11
