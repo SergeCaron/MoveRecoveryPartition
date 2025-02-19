@@ -45,7 +45,7 @@
 ##					a dirty partition and the user may end up with a recover partition the
 ##					size of all remaining free space on the disk.
 ##		2025.02.18:	Force [UInt64] on all partition size computations
-##		2025.02.19:	Remove extra space in bcdedit /set command lines
+##		2025.02.19:	Formatter insert extra space in bcdedit /set command lines: rewrite
 ##
 ##******************************************************************
 
@@ -1017,8 +1017,8 @@ if (($Null -ne $Target) -and !$RElocated) {
 	bcdedit /create "$WindowsRELoaderOptions" /Device | Out-Null
 	bcdedit /set "$WindowsRELoaderOptions" ramdisksdipath \Recovery\WindowsRE\boot.sdi
 	bcdedit /set "$WindowsRELoaderOptions" ramdisksdidevice partition="$LocalLetter`:"
-	bcdedit /set "$WindowsRELoader" device ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim,"$WindowsRELoaderOptions"
-	bcdedit /set "$WindowsRELoader" osdevice ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim,"$WindowsRELoaderOptions"
+	bcdedit /set "$WindowsRELoader" device ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim",$WindowsRELoaderOptions"
+	bcdedit /set "$WindowsRELoader" osdevice ramdisk=["$LocalLetter`:"]\Recovery\WindowsRE\Winre.wim",$WindowsRELoaderOptions"
 
 	<#
 	The recovery partition is restored from backup.
