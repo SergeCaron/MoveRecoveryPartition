@@ -38,6 +38,8 @@ is made contiguoous to the first data partition.
 You have the option to display (and log) (hopefully) all actions of this script.
 
 You have the option to extend the existing / to specify the size of the new Recovery partition.
+Note: There is no implicit size reduction of the Recovery partition. To reduce the size of the
+recovery partition, simple disable the Recovery Environment before invoking the script.
 
 # Usage:
 
